@@ -29,7 +29,8 @@ We compare **Decision Trees**, **Random Forest**, and **Support Vector Machines 
 ├── README.md
 ├── LICENSE
 └── .gitignore
-´´´
+```
+
 ## 🖼️ Key Visuals
 
 ### 🔎 Exploratory Data Analysis
