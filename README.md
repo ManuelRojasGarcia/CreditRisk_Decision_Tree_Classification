@@ -34,18 +34,14 @@ We compare **Decision Trees**, **Random Forest**, and **Support Vector Machines 
 ## 🖼️ Key Visuals
 
 ### 🔎 Exploratory Data Analysis
-**Default Distribution by Job Type**  
-![Job Type Distribution](docs/1.JPG)
 
-**Correlation Matrix**  
+![Pruned Tree](docs/3.JPG)
 ![Correlation Matrix](docs/2.JPG)
 
 ---
-
 ### 🌳 Decision Tree
 **Pruned Tree**  
-![Pruned Tree](docs/3.JPG)
-
+![Job Type Distribution](docs/1.JPG)
 **Extracted Rules**  
 ![Extracted Rules](docs/4.JPG)
 
