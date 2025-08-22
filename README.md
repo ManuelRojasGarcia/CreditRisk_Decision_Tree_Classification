@@ -16,7 +16,7 @@ We compare **Decision Trees**, **Random Forest**, and **Support Vector Machines 
 
 ## 📂 Repository Structure
 
-```bash
+```
 ├── data/                  # Dataset (German Credit)
 ├── scripts/               # Modular R scripts for each step
 ├── results/               # Outputs: confusion matrices, metrics, variable importance
@@ -29,9 +29,7 @@ We compare **Decision Trees**, **Random Forest**, and **Support Vector Machines 
 ├── README.md
 ├── LICENSE
 └── .gitignore
-
----
-
+´´´
 ## 🖼️ Key Visuals
 
 ### 🔎 Exploratory Data Analysis
