@@ -1,0 +1,1150 @@
+---
+title: "Data Mining - Decision Tree Classification"
+author: "Datamanz: "
+output:
+  html_document:
+    toc: yes
+    toc_depth: 2
+    number_sections: yes
+    theme: cosmo
+  pdf_document:
+    toc: yes
+  word_document: default
+---
+
+# Introduction
+
+The purpose of this project is to apply data mining techniques to the German Credit dataset in order to explore patterns and build predictive models. The focus is on decision tree classification, evaluating its performance, and interpreting the results in the context of credit risk assessment.  
+
+The analysis follows a structured process: importing and preprocessing the dataset, conducting exploratory data analysis, building classification models (Decision Tree and Random Forest), and evaluating their predictive accuracy.  
+
+This work is part of the **Datamanz project**, which emphasizes the application of statistical learning methods and reproducible research practices using R.
+
+
+# Import Libraries and Dataset
+
+This code block ensures that all the necessary packages for data analysis and visualization are installed and loaded into the R environment. Conditional installation is applied so that only missing packages are installed. The libraries included provide tools for clustering, advanced graphics, statistical analysis, machine learning, and data manipulation.
+
+
+```{r}
+if (!require('C50')) install.packages('C50')
+library(C50)
+if (!require('gridExtra')) install.packages('gridExtra')
+library(gridExtra)
+if (!require('grid')) install.packages('grid')
+library(grid)
+if (!require('ggpubr')) install.packages('ggpubr')
+library(ggpubr)
+if (!require('cluster')) install.packages('cluster')
+library(cluster)
+if (!require('Stat2Data')) install.packages('Stat2Data')
+library(Stat2Data)
+if (!require('dplyr')) install.packages('dplyr')
+library(dplyr)
+if (!require('ggplot2')) install.packages("ggplot2")
+library(ggplot2)
+if (!require('factoextra')) install.packages("factoextra")
+library(factoextra)
+if (!require('NbClust')) install.packages("NbClust")
+library(NbClust)
+if (!require('dbscan')) install.packages('dbscan')
+library(dbscan)
+if (!require('tidyr')) install.packages('tidyr')
+library(tidyr)
+if (!require('factoextra')) install.packages('factoextra')
+library(factoextra)
+if (!require('corrplot')) install.packages('corrplot')
+library(corrplot)
+if (!require('psych')) install.packages('psych')
+library(psych)
+if (!require('DescTools')) install.packages('DescTools')
+library(DescTools)
+if (!require('rpart')) install.packages('rpart')
+library(rpart)
+if (!require('rpart.plot')) install.packages('rpart.plot')
+library(rpart.plot)
+if (!require('DiagrammeR')) install.packages('DiagrammeR')
+library(DiagrammeR)
+if (!require('randomForest')) install.packages('randomForest')
+library(randomForest)
+if (!require('caret')) install.packages('caret')
+library(caret)
+if (!require('e1071')) install.packages('e1071')
+library(e1071)
+if (!require('pROC')) install.packages('pROC')
+library(pROC)
+```
+
+Next, the German Credit dataset is loaded from a CSV file and stored in the object dfcredit. This data frame will be used throughout the project for preprocessing, exploratory analysis, and predictive modeling.
+
+```{r}
+dfcredit <- read.csv("C:/Users/Manuel/Desktop/credit.csv")
+```
+
+# Preprocessing and Exploratory Analysis
+
++ At this stage, it is important to gain a clear understanding of the dataset before proceeding with further analysis. Take note of any observations or surprising findings in the data.
+
+The `head(dfcredit)` command displays the first rows of the data frame `dfcredit`. This provides a quick overview of the loaded dataset, helping to understand its structure and contents.  
+
+
+```{r}
+head(dfcredit)
+```
+
+The str(dfcredit) command shows the internal structure of the data frame dfcredit. It provides details such as the type of object, the number of observations and variables, data types, and sample values for each column.
+
+```{r}
+str(dfcredit)
+```
+Next, we provide a short description of the variables:
+
++ *checking_balance* Indicates the customer’s current account balance, categorized into ranges such as "< 0 DM", "1 - 200 DM", and "unknown".  
++ *months_loan_duration* Represents the duration of the loan in months (numeric).  
++ *credit_history* Describes the customer’s credit history with categories such as "critical", "repaid", and "delayed".  
++ *purpose* Indicates the purpose of the loan, with categories such as "radio/tv", "furniture", "education", and others.  
++ *amount* Represents the requested loan amount (numeric).  
++ *savings_balance* Shows the customer’s savings account balance, categorized into ranges such as "< 100 DM", "500 - 1000 DM", and "unknown".  
++ *employment_length* Indicates the customer’s length of employment, with categories such as "< 1 yr", "1 - 4 yrs", "4 - 7 yrs", and "> 7 yrs".  
++ *age* Represents the customer’s age in years (numeric).  
++ *housing* Shows the customer’s housing situation, with categories such as "own", "rent", and "for free".  
++ *existing_credits* Indicates the number of existing credits held by the customer (numeric).  
++ *foreign_worker* Indicates whether the customer is a foreign worker, with values such as "yes" or "no".  
++ *telephone* Reflects whether the customer has a registered telephone line, with values "yes" or "none".  
++ *job* Describes the type of employment, with categories such as "skilled employee", "unskilled resident", and "management".  
++ *installment_rate* Monthly loan installment rate expressed as a percentage of the customer’s income.  
++ *personal_status* Marital or personal status of the customer.  
++ *other_debtors* Information about other debtors or guarantors.  
++ *residence_history* The number of years the customer has lived at the current residence.  
++ *property* Type of property owned by the customer.  
++ *installment_plan* Indicates whether the customer has an installment plan for the loan.  
++ *dependents* Number of dependents supported by the customer.  
++ *default* Indicates whether the customer has defaulted on the loan, with values:  
+  + 1: No default ("compliant")  
+  + 2: Default ("non-compliant")  
+
+The summary(dfcredit) command generates a statistical summary of the dataset, including minimum, maximum, median, quartiles, and frequency counts for categorical variables. This helps identify unusual values and provides insight into the distribution of the data.
+
+```{r}
+summary(dfcredit)
+```
+
+The following commands provide further insights:
+
+lapply(dfcredit, unique): Applies the unique function to each column of the data frame, returning a list of unique values for every variable.
+
+sapply(dfcredit, function(x) length(unique(x))): Calculates the number of unique values in each column, returning a vector of counts.
+
+sapply(dfcredit, class): Returns the data type (class) of each column, providing an overview of how variables are stored.
+
+```{r}
+lapply(dfcredit, unique)
+sapply(dfcredit, function(x) length(unique(x)))
+sapply(dfcredit, class)
+```
+
+
+As observed, the results from these functions are not very informative in their current form, since many columns are not yet properly categorized. Therefore, it is both logical and practical to transform the categorical variables into factors. This facilitates working with categorical data, optimizes statistical analysis, and allows the use of specialized visualization tools.
+
+*Reference Nº1*
+
+The following transformation converts all character-type columns in dfcredit into factors:
+
+```{r}
+dfcredit <- dfcredit %>%
+  mutate(across(where(is.character), factor))
+str(dfcredit)
+```
+This transformation ensures that categorical variables are correctly encoded, preparing the dataset for subsequent modeling and analysis.
+
+```{r}
+summary(dfcredit)
+```
++ Initial Observations
+
+*Low balances in accounts (checking_balance and savings_balance)*  
+Most customers have less than 100 DM in savings (603 cases) or unknown balances (183).  
+For current accounts, 274 customers are negative (< 0 DM), while 394 have missing or unknown values.  
+
+*Moderate loan amounts*  
+The average loan amount is 3,271 DM, with a median of 2,320 and values ranging from 250 to 18,424.  
+While small to moderate loans dominate, there are large loans exceeding 10,000 DM.  
+
+*Loan purposes focused on consumer goods*  
+The most common purposes are radio/TV (280), car (new) (234), and furniture (181), showing high demand for basic consumption.  
+Less frequent categories include business (97) and education (50), indicating lower use for productive activities.  
+
+*Credit history with frequent problems*  
+293 customers have a critical credit history, representing a significant proportion of credit risk.  
+Only 40 customers have fully repaid loans, suggesting general repayment difficulties.  
+
+*Target variable (default) and prediction of non-compliance*  
+The variable *default* takes values 1 and 2, corresponding to two classes: compliant (1) and non-compliant (2).  
+The analysis is oriented toward predicting the probability of default to support credit decisions.  
+
+*Average customer age*  
+The average age is 35.55 years, with a median of 33 and a wide range from 19 to 75 years.  
+Most customers fall into the young adult group, with 75% under 42 years old.  
+
+*Foreign workers and lack of registered telephone*  
+The vast majority are foreign workers (yes: 963 vs. no: 37), reflecting a highly mobile clientele.  
+Additionally, 596 customers do not have a registered telephone, making direct contact difficult and increasing operational risks.  
+
++ Data Cleaning
+
+To consolidate these initial observations, it is essential to confirm that the dataset has a solid structure and is valuable for analysis. A key step in ensuring data quality is verifying the absence of erroneous or inconsistent values that could bias results.  
+
+The logical first step is to check for empty values, missing values, or entries marked as NA (Not Available), as these represent gaps in information that could affect calculations and subsequent models. Detecting and properly handling these values is critical to ensuring analytical precision and avoiding errors in interpretation or prediction.  
+
+
+```{r}
+missing_values <- is.na(dfcredit) | dfcredit == "" | dfcredit == "NA"
+missing_values_count <- colSums(missing_values)
+print(missing_values_count)
+```
+
+This code combines multiple conditions to detect missing values. It evaluates whether data are NA, empty cells (""), or explicitly marked as "NA" in text format. Then, colSums counts how many missing values exist in each column of the data frame, providing a clear summary of the dataset’s state.
+
+Based on this analysis, we can determine whether missing values exist that require treatment, either through imputation, removal, or another method. This step ensures that the dataset meets the quality standards required for reliable analysis and accurate results.
+
+As seen from the execution, the dataset does not contain missing values. This means there are no NA records, empty cells, or explicit "NA" text. This is highly positive, as it guarantees that the dataset is complete and does not require further preprocessing to handle missing values.
+
+The absence of missing values allows us to proceed with the analysis without implementing imputation techniques, row/column removal, or other strategies for handling incomplete data. This not only simplifies the workflow but also ensures that the results are not biased due to missing information.
+
+Having a clean dataset with no missing values provides a strong foundation for statistical analysis, exploratory research, and predictive modeling, maximizing both the reliability and usefulness of the results.
+
+Next, we proceed to analyze outliers in the dataset, focusing exclusively on numeric variables. Outliers are data points that fall significantly above or below the expected range and can strongly influence analytical results. Therefore, it is critical to identify and evaluate them carefully to decide how to handle them in the context of this study.
+
+Recall that outliers may represent data errors, exceptional cases, or unusual behaviors, and their treatment depends on the study’s objective. In this case, the Interquartile Range (IQR) method will be used to detect extreme values in numeric columns, while categorical variables remain unaffected.
+
+```{r}
+df_numeric <- dfcredit[, sapply(dfcredit, is.numeric)]
+Q1 <- apply(df_numeric, 2, function(x) quantile(x, 0.25, na.rm = TRUE))
+Q3 <- apply(df_numeric, 2, function(x) quantile(x, 0.75, na.rm = TRUE))
+IQR <- Q3 - Q1
+
+lower_bound <- Q1 - 1.5 * IQR
+upper_bound <- Q3 + 1.5 * IQR
+outliers <- (df_numeric < lower_bound | df_numeric > upper_bound)
+
+outliers_count <- colSums(outliers, na.rm = TRUE)
+boxplot(df_numeric, main = "Boxplot de las columnas numéricas", las = 2)
+```
+
+The analysis reveals the presence of outliers in the variable amount, representing loan amounts. Some loans are significantly larger or smaller than the majority, which could influence statistical analyses and predictive models by biasing measures of central tendency, dispersion, or model predictions.
+
+It is therefore essential to analyze these extreme values in detail. We will explore the distribution of amount, evaluate the magnitude of outliers, and determine whether they correspond to valid data (e.g., exceptional loans) or represent errors. This will guide decisions on whether to adjust, remove, or retain them depending on the study’s context.
+
+```{r}
+summary(dfcredit$amount)
+boxplot(dfcredit$amount, main = "Boxplot de 'amount'")
+lower_bound_amount <- Q1["amount"] - 1.5 * IQR["amount"]
+upper_bound_amount <- Q3["amount"] + 1.5 * IQR["amount"]
+
+outliers_amount <- dfcredit[dfcredit$amount < lower_bound_amount | dfcredit$amount > upper_bound_amount, ]
+print(outliers_amount)
+
+```
+
+In other datasets, a high number of outliers in amount could indicate inconsistencies, errors, or exceptional cases. However, in this specific context, the amount variable reflects loan amounts that can legitimately vary depending on multiple factors, such as bank policy, customer solvency, and loan purpose (e.g., car purchase, business, education).
+
+Such variability does not necessarily imply incorrect or anomalous values. On the contrary, differences in loan amounts may simply reflect the diversity of banking decisions and customer needs. Without explicit information on maximum allowable amounts or internal bank rules, it is not possible to determine whether extreme values are true outliers or valid cases.
+
+Therefore, all values in amount, including large loans, should be considered plausible. Large amounts may correspond to corporate clients or high-value projects. It would be inappropriate to automatically treat them as erroneous outliers without additional context.
+
+Finally, we analyze the frequency distribution of categorical variables to better understand their composition and detect potential imbalances.
+
+For categorical variables, frequency counts highlight dominant categories and reveal whether certain categories are underrepresented or overly dominant. This is especially relevant for the target variable default, where class imbalance could affect predictive performance.
+
+For numeric variables, frequencies can be explored through binning to observe distribution ranges, concentration of values, and potential extremes.
+
+This step provides a global view of the dataset and informs decisions on cleaning, transformation, or segmentation, ensuring efficient processing and accurate predictive results.
+
+```{r}
+categorical_vars_names <- names(dfcredit)[sapply(dfcredit, is.factor)]
+par(mfrow = c(3, 3), mar = c(5, 5, 3, 2)) 
+
+for (var in categorical_vars_names) {
+  freq <- table(dfcredit[[var]])
+  barplot(freq, 
+          main = paste("Frecuencia de", var), 
+          col = "blue", 
+          las = 1,        
+          cex.names = 0.7,  
+          horiz = TRUE     
+  )
+}
+
+par(mfrow = c(1, 1))
+```
+
++ Frequency of *housing*  
+Most customers own their home (own), with more than 700 cases. This may indicate that the bank has a larger proportion of clients with housing stability, which could be a positive factor when assessing creditworthiness. On the other hand, clients who rent (rent) or live rent-free (for free) are considerably less frequent, suggesting they may have higher risk profiles or different financial needs.  
+
++ Frequency of *telephone*  
+Approximately 600 customers do not have a registered telephone (none), while just over 400 do (yes). The absence of a phone line may complicate communication between the bank and its clients, potentially increasing operational risks, especially for follow-ups or collections. This variable may be useful in identifying potential limitations in certain customer profiles.  
+
++ Frequency of *foreign_worker*  
+The vast majority of customers (963) are foreign workers (yes), while only 37 are not (no). This predominance may reflect the bank’s focus on serving an international or mobile clientele, which could be a key factor in its credit policies.  
+
++ Frequency of *job*  
+Skilled employees represent the largest group, with more than 600 cases. Less frequent are unskilled residents and self-employed workers. This suggests that the bank tends to attract clients with more stable employment or predictable income, which is a positive factor in minimizing default risk.  
+
++ Frequency of *checking_balance*  
+A large proportion of customers (394) have an unknown balance (unknown) in their current accounts, followed by those with 1–200 DM (269) and negative balances (< 0 DM, 274). Only a small group has balances above 200 DM (> 200 DM). This reflects a clientele with limited resources or unclear financial information, which may be a risk factor to consider.  
+
++ Frequency of *credit_history*  
+Credit history shows that 530 customers have repaid loans, while 293 are marked as critical. This indicates that although many customers fulfill their obligations, there is also a significant number with problematic histories, raising the overall portfolio risk.  
+
++ Frequency of *purpose*  
+The main loan purposes include radio/TV (280), car (new) (234), and furniture (181). This reflects high demand for basic consumer goods. Purposes such as business (97) and education (50) are less common, suggesting limited focus on productive or long-term activities.  
+
++ Frequency of *savings_balance*  
+Most customers have less than 100 DM in savings (< 100 DM, 603), with a considerable number having unknown balances (183). Few customers have higher savings, suggesting that the bank mainly serves clients with limited financial resources.  
+
++ Frequency of *employment_length*  
+The most common employment periods are > 7 years (253) and 1–4 years (339). This reflects a mix of long-term job stability for some clients, while others show shorter employment histories, possibly indicating greater economic instability.  
+
++ Frequency of *personal_status*  
+The majority of customers are single males (548) or females (310), while married and divorced males are fewer. This could suggest segmentation in the client base, with a focus on individuals not relying on shared or family income.  
+
++ General Conclusion  
+The frequency analysis reveals several insights. The clientele appears to consist mostly of individuals with limited financial resources, but with some degree of employment and housing stability. The predominance of foreign workers and the absence of telephones in many cases may pose additional challenges for the bank. Loan purposes reflect a focus on consumer goods rather than productive or educational activities. These patterns are valuable for guiding further analysis.  
+
+Before moving to numerical correlation analysis, we begin by exploring the relationships among variables visually. This approach allows us to intuitively identify patterns, trends, and potential associations among numeric variables that may not be immediately obvious.  
+
+```{r}
+df_numeric <- dfcredit[, sapply(dfcredit, is.numeric)]
+correlation_matrix <- cor(df_numeric, use = "complete.obs")
+print(correlation_matrix)
+
+corrplot(correlation_matrix, method = "circle", type = "upper", order = "hclust", 
+         tl.col = "black", tl.srt = 45, addrect = 2)
+```
+We also compute an alternative correlation plot with numerical values for confirmation:
+
+```{r}
+correlation_matrix <- cor(df_numeric, use = "complete.obs")
+corrplot(correlation_matrix, 
+         method = "number",  
+         type = "upper",     
+         order = "hclust",   
+         tl.col = "black",   
+         tl.srt = 45,        
+         addrect = 2,        
+         col = colorRampPalette(c("blue", "white", "red"))(200))  
+```
+
++ *Loan duration and loan amount:* Moderate positive correlation (0.62), indicating that larger loans tend to have longer durations.  
+
++ *Loan amount and installment rate:* Slight negative correlation (-0.27), suggesting that higher loan amounts are associated with lower installment rates.  
+
++ *Age and residence history:* Moderate positive correlation (0.27), indicating that older individuals tend to have greater residential stability.  
+
++ *Loan duration and default:* Low positive correlation (0.21), implying that longer-term loans carry a slightly higher risk of default.  
+
++ *Loan amount and default:* Low positive correlation (0.15), suggesting that larger loans are associated with a slight increase in default risk.  
+
++ *Age and dependents:* Low positive correlation (0.12), indicating that older individuals tend to have slightly more family responsibilities.  
+
++ *Age and installment rate:* Very weak positive correlation (0.058), which may reflect a minor relationship between age and installment preferences.  
+
++ *Default and other variables:* Shows very low correlations with most other variables, suggesting that default depends on external factors not captured in this analysis.  
+
+
+We now focus on analyzing the default variable, which indicates whether loans are repaid or not. This analysis is crucial for identifying factors associated with non-compliance, assessing credit risk, and understanding how variables such as loan size or credit history influence customer behavior.
+
+```{r}
+freq_default <- table(df_numeric$default)
+cumple <- freq_default[1]  
+incumple <- freq_default[2]  
+cat("Cantidad de Cumple:", cumple, "\n")
+cat("Cantidad de Incumple:", incumple, "\n")
+
+barplot(freq_default, 
+        main = "Frecuencia de incumplimiento (default)", 
+        col = c("green", "red"), 
+        names.arg = c("Cumple", "Incumple"), 
+        las = 1)
+```
+We begin by examining loan compliance across different age groups.
+
+```{r}
+df_numeric$age_group <- cut(
+  df_numeric$age,
+  breaks = c(18, 25, 35, 45, 55, 65, Inf),
+  labels = c("18-25", "26-35", "36-45", "46-55", "56-65", "65+"),
+  right = FALSE
+)
+
+df_table <- as.data.frame(table(df_numeric$age_group, df_numeric$default))
+colnames(df_table) <- c("AgeGroup", "Default", "Frequency")
+
+ggplot(df_table, aes(x = AgeGroup, y = Frequency, fill = Default)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = c("lightgreen", "lightcoral")) +  
+  labs(title = "Distribución de Default según Edad", x = "Grupo de Edad", y = "Frecuencia") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+Based on the graph and data:
+
++ *Group 26–35*: Represents the largest group of clients, with a high percentage complying with their loans (green). This group appears to be the most financially active and relatively reliable.  
+
++ *Groups 18–25 and 36–45*: Represent a smaller proportion of observations. Although compliant customers predominate, the percentage of defaults (red) is noticeably higher than in the central group.  
+
++ *Older groups (46–55, 56–65, 65+)*: Although these groups have fewer clients overall, they stand out for having higher proportions of compliance, reflecting greater credit responsibility at older ages.  
+
++ *General pattern*: Age appears to influence both access to and behavior regarding credit, with younger and middle-aged groups facing more challenges in meeting obligations.  
+
+The pattern suggests that age influences both access to and behavior regarding credit, with younger and middle-aged groups facing more challenges in meeting obligations.
+
+```{r}
+ggplot(df_numeric, aes(x = amount, y = factor(default, levels = c(1, 2), labels = c("Cumple", "Incumple")), color = factor(default))) +
+  geom_point() +
+  labs(title = "Relación entre cantidad del Préstamo y Default", 
+       x = "Cantidad del Préstamo", 
+       y = "Default (Cumple / Incumple)") +
+  scale_color_manual(values = c("lightgreen", "lightcoral")) +
+  theme_minimal()
+```
+
+Relationship between loan amount and compliance status (default):
+
++ *Compliant*: Customers who meet their payments are distributed across different loan amounts, with a greater concentration in smaller loans (below 5,000).  
+
++ *Default*: Defaults are present across all ranges but occur more frequently with higher-value loans (above 10,000).  
+
++ *General trend*: As loan amounts increase, the proportion of defaults rises, suggesting that larger loans carry a higher credit risk.  
+
+The pattern suggests that age influences both access to and behavior regarding credit, with younger and middle-aged groups facing more challenges in meeting obligations.
+
+```{r}
+ggplot(df_numeric, aes(x = factor(installment_rate), fill = factor(default, levels = c(1, 2), labels = c("Cumple", "Incumple")))) +
+  geom_bar(position = "fill") +
+  scale_fill_manual(values = c("lightgreen", "lightcoral")) +
+  labs(title = "Distribución de Default según Tasa de Cuota", 
+       x = "Tasa de Cuota del Préstamo", 
+       y = "Proporción") +
+  theme_minimal()
+```
+Relationship between loan amount and compliance status (default):
+
++ *Compliant*: Most customers comply across all installment rate categories, with proportions consistently around 75% or higher.  
+
++ *Default*: Defaults increase slightly as installment rate rises. At level 4 (highest rate), a higher proportion of defaults is observed compared to lower levels.  
+
++ *General trend*: Higher installment rates (4) are associated with relatively more defaults, indicating greater repayment difficulties for these clients.  
+
+
+```{r}
+ggplot(df_numeric, aes(x = factor(residence_history), fill = factor(default, levels = c(1, 2), labels = c("Cumple", "Incumple")))) +
+  geom_bar(position = "fill") +
+  scale_fill_manual(values = c("lightgreen", "lightcoral")) +
+  labs(title = "Distribución de Default según Historial de Residencia", 
+       x = "Historial de Residencia", 
+       y = "Proporción") +
+  theme_minimal()
+```
+
+Distribution of compliance status (Default) according to residence history:
+
+*Compliant*: The proportion of customers who comply with their payments is consistent and predominant across all residence history levels (1 to 4), with values close to or above 75%.  
+
+*Default*: Although defaults are lower in proportion, they remain evenly distributed across all residence history levels, without significant change as residence duration increases.  
+
+*General trend*: There does not appear to be a strong relationship between residence history and the probability of default, since proportions are fairly similar across all categories.  
+
+This suggests that residence history may not be a decisive factor in credit risk within this dataset.  
+
+```{r}
+ggplot(df_numeric, aes(x = factor(existing_credits), fill = factor(default, levels = c(1, 2), labels = c("Cumple", "Incumple")))) +
+  geom_bar(position = "fill") +
+  scale_fill_manual(values = c("lightgreen", "lightcoral")) +
+  labs(title = "Distribución de Default según Créditos Existentes", 
+       x = "Número de Créditos Existentes", 
+       y = "Proporción") +
+  theme_minimal()
+```
+Distribution of compliance (Default) according to the number of existing credits:
+
+*Compliant*: Customers who comply with their loans predominate across all categories of existing credits, maintaining a proportion close to 75%.  
+
+*Default*: The proportion of defaults is consistent and slightly higher as the number of existing credits increases, especially in the category with 4 existing credits.  
+
+*General trend*: Although the overall percentage of defaults is moderate, a higher number of existing credits seems to be associated with a gradual increase in the proportion of defaults, which may indicate higher credit risk for customers with multiple financial commitments.  
+
+This analysis suggests that the number of existing credits could be a relevant factor in credit risk evaluation.  
+
+
+```{r}
+ggplot(dfcredit, aes(x = purpose, fill = factor(default, levels = c(1, 2), labels = c("Cumple", "Incumple")))) +
+  geom_bar(position = "fill") +
+  scale_fill_manual(values = c("lightgreen", "lightcoral")) +
+  labs(title = "Distribución de Default según Purpose", 
+       x = "Purpose", 
+       y = "Proporción") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+Distribution of compliance (Default) according to loan purpose:
+
+*Compliant*: Most loan purposes show a high proportion of compliance. Categories such as "radio/TV", "education", and "repairs" stand out with above-average compliance rates.  
+
+*Default*: Loan purposes related to "domestic appliances" and "business" show a higher proportion of defaults compared to other purposes. This could suggest that these loans carry greater risk.  
+
+*General trend*: The most common purposes such as "car (new)" and "radio/TV" appear relatively safe in terms of compliance, while less common or higher-risk purposes show a higher incidence of defaults.  
+
+This indicates that loan purpose is a relevant factor for predicting default risk.  
+
+## Bias, Xenophobia, and Discrimination
+
+The following section of the exploratory analysis is carried out with the main objective of avoiding potential biases in the interpretation of data and the evaluation of credit risks. By including variables such as marital status, foreign worker status, and other demographic or financial factors, we can identify relevant patterns that may influence loan approval or default. This approach provides a more complete and realistic view of customer behavior, ensuring that credit-related decisions are based on objective data rather than assumptions.  
+
+In this way, we aim to prevent prejudices or subjective interpretations from affecting the conclusions of the analysis. This not only ensures a fairer and more equitable approach to risk evaluation, but also contributes to optimizing credit policies and strengthening customer trust in financial institutions. Carefully considering these variables allows us to obtain more precise insights and develop strategies that better fit customer needs and behaviors, minimizing risks and maximizing the effectiveness of the analysis.  
+
+
+```{r}
+df_personal_status <- as.data.frame(table(dfcredit$personal_status, dfcredit$default))
+colnames(df_personal_status) <- c("PersonalStatus", "Default", "Frequency")
+df_personal_status$Default <- factor(df_personal_status$Default, levels = c(1, 2), labels = c("Cumple", "Incumple"))
+
+ggplot(df_personal_status, aes(x = PersonalStatus, y = Frequency, fill = Default)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  scale_fill_manual(values = c("lightgreen", "lightcoral")) +
+  labs(title = "Distribución de Default por Estado Civil", x = "Estado Civil", y = "Frecuencia") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+df_foreign_worker <- as.data.frame(table(dfcredit$foreign_worker, dfcredit$default))
+colnames(df_foreign_worker) <- c("ForeignWorker", "Default", "Frequency")
+df_foreign_worker$Default <- factor(df_foreign_worker$Default, levels = c(1, 2), labels = c("Cumple", "Incumple"))
+
+ggplot(df_foreign_worker, aes(x = ForeignWorker, y = Frequency, fill = Default)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  scale_fill_manual(values = c("lightgreen", "lightcoral")) +
+  labs(title = "Distribución de Default por Trabajador Extranjero", x = "Trabajador Extranjero", y = "Frecuencia") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+*Distribution by Foreign Worker:*  
+
++ *Compliant*: Most foreign workers comply with their credit obligations, but they also represent a large group of defaulters in absolute terms.  
++ *Default*: While defaults among local workers are scarce, among foreign workers there is a significant proportion of defaults.  
++ *Trend*: Foreign worker status is associated with a relatively higher risk of default compared to local workers.  
+
+*Distribution by Marital Status:*  
+
++ *Single Male*: Show a higher proportion of defaults compared to other marital status groups.  
++ *Female*: Women display higher compliance rates and lower default incidence compared to single males.  
++ *Married Male*: Perform well in terms of compliance, representing a low-risk group.  
+```{r}
+df_job <- as.data.frame(table(dfcredit$job, dfcredit$default))
+colnames(df_job) <- c("Job", "Default", "Frequency")
+df_job$Default <- factor(df_job$Default, levels = c(1, 2), labels = c("Cumple", "Incumple"))
+
+ggplot(df_job, aes(x = Job, y = Frequency, fill = Default)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  scale_fill_manual(values = c("lightgreen", "lightcoral")) +
+  labs(title = "Distribución de Default por Tipo de Trabajo", x = "Tipo de Trabajo", y = "Frecuencia") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+*Analysis of Distribution by Job Type*  
+
++ *Skilled Employee*: Represents the largest proportion of clients in both compliance and default. Although compliant clients predominate, the absolute volume of defaulters in this group is also considerable due to its size.  
++ *Unskilled Resident*: Proportionally, shows a more concerning balance between compliance and defaults compared to skilled employees, indicating higher relative risk.  
++ *Management / Self-Employed*: Although a smaller group, the proportion of compliant clients is notably higher, indicating a low-risk profile.  
++ *Unemployed Non-Resident*: This group has the lowest absolute frequency, but the relative default rate is high, representing a higher-risk profile.  
+
+---
+
+# Statistical Significance Tests  
+
+Risk groups to be used in order to confirm whether our exploratory analysis is correct. Summary below:  
+
++ *Age Groups*: Higher risk in 18–25 and 36–45. Although compliant clients predominate, these groups have higher proportions of defaults.  
++ *Loan Amount (amount)*: Higher risk for loans above 10,000, with defaults increasing as loan size grows.  
++ *Installment Rate (installment_rate)*: Higher risk at the highest rate (4), where defaults rise due to increased financial burden.  
++ *Loan Purpose (purpose)*: Higher risk in *domestic appliances* and *business*, with more defaults than categories like *radio/TV* or *education*.  
++ *Marital Status (personal_status)*: Single males show significantly more defaults compared to women or married men. Requires financial and employment analysis.  
++ *Foreign Workers (foreign_worker)*: Higher defaults compared to locals. Requires further exploration of income and financial stability.  
++ *Job Type (job)*: Higher risk in *Unskilled Resident* and *Unemployed Non-Resident*, with high proportions of defaults reflecting lower economic stability.  
+
+
+```{r}
+tabla_purpose_default <- table(dfcredit$purpose, dfcredit$default)
+tabla_personal_status_default <- table(dfcredit$personal_status, dfcredit$default)
+tabla_job_default <- table(dfcredit$job, dfcredit$default)
+
+phi_purpose_default <- Phi(tabla_purpose_default)
+cramer_v_purpose_default <- CramerV(tabla_purpose_default)
+cat("Phi para Purpose vs Default:", phi_purpose_default, "\n")
+cat("Cramér V para Purpose vs Default:", cramer_v_purpose_default, "\n")
+
+phi_personal_status_default <- Phi(tabla_personal_status_default)
+cramer_v_personal_status_default <- CramerV(tabla_personal_status_default)
+cat("Phi para Personal Status vs Default:", phi_personal_status_default, "\n")
+cat("Cramér V para Personal Status vs Default:", cramer_v_personal_status_default, "\n")
+
+phi_job_default <- Phi(tabla_job_default)
+cramer_v_job_default <- CramerV(tabla_job_default)
+cat("Phi para Job vs Default:", phi_job_default, "\n")
+cat("Cramér V para Job vs Default:", cramer_v_job_default, "\n")
+
+chisq.test(tabla_purpose_default)
+chisq.test(tabla_personal_status_default)
+chisq.test(tabla_job_default)
+
+```
+The results of the Phi, Cramér’s V, and Chi-square tests provide a clear view of the association between categorical variables and the target variable *default*, which represents loan non-compliance. These metrics are essential for evaluating the strength and significance of the relationships among variables, allowing us to identify important patterns that may influence credit behavior.  
+
+For the variable *Purpose* (loan purpose), both the Phi coefficient and Cramér’s V yield a value of 0.1826, indicating a weak but statistically significant association with *default*. In addition, the Chi-square test reports X² = 33.356 with a p-value of 0.0001157, confirming that there is a statistically significant relationship between loan purpose and default. This suggests that certain purposes may be associated with higher default risk, which could be relevant for adjusting credit policies depending on the loan’s objective.  
+
+For the variable *Personal Status*, the Phi and Cramér’s V values are lower, 0.0980, indicating a very weak association with *default*. However, the Chi-square test with X² = 9.6052 and a p-value of 0.02224 shows that the relationship is still statistically significant. This may reflect small differences in default rates depending on personal status, although the overall impact appears limited.  
+
+Finally, for the variable *Job* (occupation), both Phi and Cramér’s V yield extremely low values, 0.0434, indicating virtually no association with *default*. The Chi-square test, with X² = 1.8852 and a p-value of 0.5966, confirms that there is no statistically significant relationship between occupation and default. This implies that job type does not appear to be a determining factor in loan repayment behavior.  
+
+We graph the results below.  
+
+```{r}
+data <- data.frame(
+  Variable = c("Purpose", "Personal Status", "Job"),
+  Cramer_V = c(0.1826, 0.0980, 0.0434),
+  P_Value = c(0.0001, 0.0222, 0.5966)
+)
+
+data$Significance <- ifelse(data$P_Value < 0.05, "Significant", "Not Significant")
+
+ggplot(data, aes(x = Variable, y = Cramer_V, fill = Variable)) +
+  geom_bar(stat = "identity", color = "black") +
+  geom_hline(yintercept = 0.1, linetype = "dashed", color = "red", size = 1) +
+  labs(
+    title = "Cramér V Analysis",
+    x = "Variables",
+    y = "Cramér V"
+  ) +
+  theme_minimal() +
+  scale_fill_manual(values = c("skyblue", "lightgreen", "coral"))
+
+ggplot(data, aes(x = Variable, y = P_Value, fill = Significance)) +
+  geom_bar(stat = "identity", color = "black") +
+  geom_hline(yintercept = 0.05, linetype = "dashed", color = "red", size = 1) +
+  labs(
+    title = "Chi-Square Test P-Values",
+    x = "Variables",
+    y = "P-Value"
+  ) +
+  theme_minimal() +
+  scale_fill_manual(values = c("green", "orange"))
+
+```
+*Purpose (Loan Purpose):*  
+
++ *Phi and Cramér’s V*: 0.1826 (low association).  
++ *Chi-square*: p-value = 0.0001, indicating a significant relationship.  
++ *Conclusion*: Loan purpose has a relevant association with default, with higher risks observed in categories such as consumer goods and business.  
+
+*Personal Status:*  
+
++ *Phi and Cramér’s V*: 0.0980 (very weak association).  
++ *Chi-square*: p-value = 0.0222, indicating a significant relationship.  
++ *Conclusion*: Although the relationship is weak, single males show a higher risk, complementing other factors.  
+
+*Job (Employment Type):*  
+
++ *Phi and Cramér’s V*: 0.0434 (insignificant association).  
++ *Chi-square*: p-value = 0.5966, no significant relationship.  
++ *Conclusion*: Employment type does not show a relevant association with default in this analysis.  
+
+*Overall Conclusion:*  
+Purpose is the most relevant variable, showing statistical significance in Phi, Cramér’s V, and Chi-square. Personal Status has a minor impact, while Job shows no relevance.  
+
+---
+
+The initial analysis aimed to visually explore the relationships between categorical variables and loan compliance or default. Through bar plots and frequency tables, I identified patterns in variables such as loan purpose (*purpose*), marital status (*personal_status*), and employment type (*job*).  
+
+For example, loans aimed at household appliances and business had higher proportions of defaults, while purposes such as education or repairs showed higher compliance rates. Regarding *personal_status*, single males stood out with higher default rates, and among job categories, unskilled residents showed relatively higher risk.  
+
+To validate these observations and rule out coincidences, I conducted statistical tests such as Phi, Cramér’s V, and Chi-square. The results confirmed my initial findings. The variable *purpose* showed a weak but statistically significant association (Cramér’s V: 0.1826, p-value < 0.001), supporting its relevance as a risk factor. In contrast, *personal_status* showed a weak but significant association (Cramér’s V: 0.0980, p-value = 0.0222), and *job* showed no significant relationship (Cramér’s V: 0.0434, p-value = 0.5966).  
+
+Descriptive analysis and statistical metrics converge, confirming that loan purpose is a key variable in default risk, while marital status and job have minor or negligible impact.  
+
+# Building the First Decision Tree  
+
+You may choose to use all variables or, with justification, exclude some from the model.  
+
+*Justification for excluding variables*  
+
++ Based on exploratory analyses, variables such as *Job*, which showed very low and non-significant correlation with default in statistical tests, may not add value to the model and can be excluded.  
++ Variables with weak but significant associations, such as *Purpose* and *Personal Status*, will be retained initially, as they may contribute indirectly to the model.  
++ Numeric variables such as *amount* (loan amount) will be included, given their potential importance in predicting default.  
+
+```{r}
+dfcredit$default <- ifelse(dfcredit$default > 1, "yes", "no")
+dfcredit$default <- as.factor(dfcredit$default)
+dfcredit <- subset(dfcredit, select = -job)
+```
+
+
+We could build a decision tree directly using the entire dataset, but as demonstrated in practical examples, class notes, and prior research, it is considered good practice to split the dataset and train the model beforehand. This approach ensures that the model not only performs well on the data it was built with, but is also capable of generalizing its performance to unseen data. Training the model before evaluating it is an essential step in any supervised learning process, as it guarantees that conclusions and predictions are not biased by the training data.  
+
+Splitting the dataset into two subsets—one for training and one for testing—allows us to build the model with part of the data and then evaluate its performance with data that was not used in its construction. This is key to validating the model’s ability to correctly predict outcomes in real-world situations. If we were to fit the model directly using the entire dataset, we might obtain an artificially high accuracy, but we would not know how the model behaves with new data. This phenomenon, known as *overfitting*, occurs when a model learns the details and noise of the training data too well, losing its ability to generalize to unseen cases.  
+
+The following code implements this approach by splitting the `dfcredit` dataset into two subsets: one with 90% of the data for training and the other with the remaining 10% for testing. This division ensures that a representative portion of the dataset is used to train the model, while the rest is reserved for evaluating its performance. We also verify that the proportions of the target variable classes (*default*) are similar in both subsets, ensuring that the sample is representative and does not introduce bias into training or evaluation.  
+
+Training the model on a subset of the data also allows us to tune hyperparameters and experiment with different configurations before validating the final model. This provides additional control over the process and increases confidence in the obtained results. In summary, prior training is a fundamental step to develop a robust, reliable, and useful model capable of facing real-world scenarios with precision and effectiveness.  
+
+*Reference Nº2*  
+
+```{r}
+set.seed(100)  
+
+sample <- sample(1000,900)
+str(sample)
+train <- dfcredit[sample,]
+test <- dfcredit[-sample,]
+prop.table(table(train$default))
+prop.table(table(test$default))
+```
+
+```{r}
+train$default <- as.factor(train$default)
+model <- C5.0(default ~ ., data = train)
+summary(model)
+```
+
+Visualizing the entire decision tree can result in an excessively large and complex structure, which is not useful when it contains too many branches or nodes, making the interpretation of important rules difficult. Pruning the tree helps simplify its structure by removing irrelevant or redundant branches, making the model more visually manageable and easier to interpret.  
+
+In addition, pruning combats *overfitting*, a problem where the tree fits too closely to the training data, capturing noise and irrelevant patterns that reduce its ability to generalize. By pruning, the model’s performance on new data is improved, leading to more reliable predictions and reducing the risk of unnecessary complexity.  
+
+*Reference Nº3*  
+
+```{r}
+model_rpart <- rpart(default ~ ., data = train, control = rpart.control(cp = 0.01))
+plot(model_rpart, uniform = TRUE, main = "Árbol Podado")
+text(model_rpart, use.n = TRUE, cex = 0.8)
+```
+
+*Tree Structure*  
+
+- *Root Node:*  
+The variable *checking_balance* is the root node, confirming its importance as the most relevant factor in classifying customers.  
+If the current account balance is *unknown* or *greater than 200 DM*, the customer is classified as non-compliant (default) in most cases.  
+If it is *1 – 200 DM* or *less than 0 DM*, the tree branches further into other variables such as *credit_history* and *savings_balance* to make more specific decisions.  
+
+- *Main Subdivisions:*  
+After *checking_balance*, other variables such as *credit_history* and *savings_balance* carry significant weight in classifications.  
+Factors such as loan purpose (*purpose*), loan duration (*months_loan_duration*), and additional debtors (*other_debtors*) are also included in deeper levels of the tree.  
+
+*Tree Size and Accuracy*  
+
+- *Tree Size:* The current tree has 68 nodes, indicating a moderately sized model with a more compact structure compared to the initial unpruned tree.  
+- *Training Errors:* The tree makes 106 errors out of 900 cases in the training set, corresponding to an error rate of 11.8%.  
+
+- *Confusion Matrix:*  
+  - Class *No* (compliant): 605 correctly classified, 28 misclassified as *Yes*.  
+  - Class *Yes* (defaulters): 189 correctly classified, 78 misclassified as *No*.  
+
+*Class Balance*  
+
+The model is more accurate at classifying the *No* class (compliant customers), which may be due to this class being overrepresented in the training set.  
+The *Yes* class (defaulters) has a higher error rate, suggesting that balancing the classes could improve sensitivity towards defaulters.  
+
+*Variable Importance*  
+
+- *Key Variables:*  
+  - *checking_balance* (100%): The most frequently used variable and the central driver of decision splits.  
+  - *credit_history* (60.67%) and *months_loan_duration* (53.11%) also play an important role.  
+
+- *Secondary Variables:*  
+  - *savings_balance* (44.89%), *other_debtors* (41.67%), and *amount* (29.33%) explain more specific patterns.  
+
+- *Less Relevant Variables:*  
+  - *employment_length* (0.67%) and *telephone* (2.22%) have little influence on the tree’s decisions.  
+
+*Model Strengths*  
+
+- *Interpretability:* The model is easy to understand and provides clear rules for classifying customers.  
+- *Identification of Key Factors:* Variables such as *checking_balance* and *credit_history* stand out as critical determinants in credit risk analysis.  
+
+*Tree Size:*  
+Although the tree has a reasonable size, it could still benefit from pruning to simplify its structure and improve generalization capacity.  
+
+*Conclusions*  
+
+The use of a fixed seed (*set.seed*) ensured that results are reproducible, which is crucial for validating and comparing different model configurations. This guarantees that changes in the tree are due to the model setup or the data, and not to randomness in sampling.  
+
+The decision tree stands out for its interpretability and ability to identify important patterns in the dataset. However, class imbalance negatively affects performance, especially in predicting defaulters.  
+
+# With the obtained tree, provide a brief explanation of the rules derived and any points of interest. One element to consider, for example, is how many observations fall under each rule.  
+
+*Reference Nº4*  
+
+```{r}
+grViz("
+digraph tree {
+  graph [layout = dot]
+  
+  # Caso 1: Simple
+  node1 [label = 'Checking Balance = Unknown', shape = box]
+  node2 [label = 'Class = No (354 cases, 40 errors)', shape = oval]
+  node1 -> node2
+  
+  # Caso 2: Intermedio
+  node3 [label = 'Checking Balance < 0 DM', shape = box]
+  node4 [label = 'Credit History = Fully Repaid', shape = box]
+  node5 [label = 'Savings Balance < 100 DM', shape = box]
+  node6 [label = 'Class = Yes (55 cases, 12 errors)', shape = oval]
+  
+  node3 -> node4
+  node4 -> node5
+  node5 -> node6
+  
+  # Caso 3: Complejo
+  node7 [label = 'Months Loan Duration > 27', shape = box]
+  node8 [label = 'Checking Balance < 0 DM', shape = box]
+  node9 [label = 'Purpose = Car (New)', shape = box]
+  node10 [label = 'Property = Other or Unknown', shape = box]
+  node11 [label = 'Class = Yes (8 cases, 1 error)', shape = oval]
+  
+  node7 -> node8
+  node8 -> node9
+  node9 -> node10
+  node10 -> node11
+}
+")
+
+```
+
++ **Case 1: (Customer Classified as No)**  
+*Rule:* If the customer has *checking_balance* = unknown, they are classified as *No*.  
+
+*Explanation:* At the root node of the decision tree, if the customer’s current account balance (*checking_balance*) is *unknown*, the customer is classified directly as compliant (*No*). This means the model does not need to evaluate any other variable to reach this conclusion. This case is simple because the decision is made at the first node without exploring additional splits.  
+
+*Observations:*  
+- This node includes 354 cases in the training data.  
+- The model makes 40 errors in this node, meaning some customers classified as *No* were actually defaulters (*Yes*).  
+
+*Interpretation:* Customers with *unknown* balances likely represent a group where the model assumes lower credit risk. This outcome may reflect a tendency in the data where this category is associated with a history of compliance. However, the errors suggest that not all customers in this group comply, indicating the rule could be improved by incorporating additional variables.  
+
++ **Case 2: Intermediate (Customer Classified as Yes)**  
+*Rule:* If *checking_balance* < 0 DM, *credit_history* = fully repaid, and *savings_balance* < 100 DM, the customer is classified as *Yes*.  
+
+*Explanation:* This rule requires evaluating three variables to classify the customer as a defaulter (*Yes*):  
+- *checking_balance* less than 0 DM, indicating a negative account balance.  
+- *credit_history* = fully repaid, suggesting previous loans were repaid.  
+- *savings_balance* less than 100 DM, indicating low savings.  
+
+*Observations:*  
+- This node includes 55 cases, with 12 errors.  
+- This means that most customers with these characteristics are correctly classified as defaulters.  
+
+*Interpretation:* A negative balance combined with low savings appears to be a signal of higher credit risk, despite having a history of fully repaid loans. This indicates that the model considers the current financial situation more relevant than past loan history when predicting default.  
+
++ **Case 3: Complex (Customer Classified as Yes)**  
+*Rule:* If *checking_balance* < 0 DM, *months_loan_duration* > 27, *purpose* = car (new), and *property* is in *other* or *unknown/none*, the customer is classified as *Yes*.  
+
+*Explanation:* This rule combines multiple variables and conditions:  
+- *checking_balance* less than 0 DM, indicating a negative balance.  
+- *months_loan_duration* > 27, reflecting a longer loan term.  
+- *purpose* = car (new), meaning the loan is requested for a new car.  
+- *property* = other or unknown/none, indicating no clear property as collateral.  
+
+*Observations:*  
+- This node includes 8 cases, with 1 error.  
+- The small number of cases suggests this rule applies to a very specific customer segment.  
+
+*Interpretation:* This case combines several risk signals: negative balance, long loan duration, specific purpose (new car), and lack of known collateral. The model uses these features to identify customers with a higher probability of default. However, the small sample size may indicate this is an uncommon pattern in the dataset and could reflect local overfitting.  
+
+# Once you have a valid model, proceed to perform a goodness-of-fit analysis on the test set and the confusion matrix. Do you consider this model sufficiently good to be used? Justify your answer by considering all possible types of error.  
+
+*Reference Nº5*  
+
+```{r}
+predicted_model <- predict(model, test)
+conf_matrix <- table(test$default, predicted_model, dnn = c("Real", "Predicción"))
+print(conf_matrix)
+accuracy <- sum(diag(conf_matrix)) / sum(conf_matrix)
+sensitivity <- conf_matrix["yes", "yes"] / sum(conf_matrix["yes", ])
+specificity <- conf_matrix["no", "no"] / sum(conf_matrix["no", ])
+precision <- conf_matrix["yes", "yes"] / sum(conf_matrix[, "yes"])
+
+cat("Precisión Global:", round(accuracy * 100, 2), "%\n")
+cat("Sensibilidad:", round(sensitivity * 100, 2), "%\n")
+cat("Especificidad:", round(specificity * 100, 2), "%\n")
+cat("Precisión (Valor Predictivo Positivo):", round(precision * 100, 2), "%\n")
+
+```
+```{r}
+accuracy <- (52 + 15) / (52 + 15 + 15 + 18) * 100
+sensitivity <- 15 / (15 + 18) * 100
+specificity <- 52 / (52 + 15) * 100
+precision <- 15 / (15 + 15) * 100
+
+metrics <- data.frame(
+  Metric = c("Precisión Global", "Sensibilidad", "Especificidad", "Precisión"),
+  Value = c(accuracy, sensitivity, specificity, precision)
+)
+
+ggplot(metrics, aes(x = Metric, y = Value, fill = Metric)) +
+  geom_bar(stat = "identity", color = "black") +
+  ylim(0, 100) +
+  labs(title = "Métricas del Modelo", y = "Porcentaje", x = "") +
+  theme_minimal()
+
+```
+
+The confusion matrix and generated metrics reflect the model’s performance on the test set. The matrix indicates that, of the actual compliant customers (*No*), 52 were correctly classified, while 15 were incorrectly classified as defaulters. On the other hand, of the actual defaulters (*Yes*), only 15 were correctly classified, while 18 were incorrectly classified as compliant.  
+
+Regarding the metrics, the overall accuracy of the model is 67%, meaning the model correctly classifies 67 out of 100 cases. Although this figure may seem reasonable, the breakdown of metrics highlights important areas for improvement. The model’s sensitivity is low, at 45.45%, indicating it correctly identifies fewer than half of actual defaulters. This could be critical in a credit system, as such errors may lead to significant financial losses. By contrast, specificity is 77.61%, showing the model is more effective at identifying compliant customers, reducing restrictions on reliable clients. Positive predictive value is moderate, at 50%, meaning that only half of the customers classified as defaulters actually are, generating a considerable number of false alarms.  
+
+The error analysis highlights that false negatives (18 cases) represent the greatest challenge, since risky customers are classified as reliable. This can cause a significant financial impact. False positives (15 cases), on the other hand, have a smaller operational impact but may harm customer experience.  
+
++ **Conclusion**  
+The model is **NOT** sufficiently robust for a real-world environment due to its low sensitivity and positive predictive value.  
+To improve performance, we will apply advanced methods such as **Random Forest**.  
+
+# Using a similar approach to the previous points and considering the same variables, enrich the exercise by fitting complementary decision tree models. Is the new approach better than the original? Justify your answer.  
+
+We will now fit a **Random Forest model**, as described in the following reference.  
+
+*Reference Nº6*  
+
+```{r}
+rf_model <- randomForest(default ~ ., data = train, ntree = 500, mtry = 3, importance = TRUE)
+print(rf_model)
+```
+```{r}
+rf_predictions <- predict(rf_model, test)
+conf_matrix_rf <- table(test$default, rf_predictions, dnn = c("Real", "Predicción"))
+print(conf_matrix_rf)
+accuracy_rf <- sum(diag(conf_matrix_rf)) / sum(conf_matrix_rf) * 100
+sensitivity_rf <- conf_matrix_rf["yes", "yes"] / sum(conf_matrix_rf["yes", ]) * 100
+specificity_rf <- conf_matrix_rf["no", "no"] / sum(conf_matrix_rf["no", ]) * 100
+precision_rf <- conf_matrix_rf["yes", "yes"] / sum(conf_matrix_rf[, "yes"]) * 100
+
+cat("Precisión Global:", round(accuracy_rf, 2), "%\n")
+cat("Sensibilidad:", round(sensitivity_rf, 2), "%\n")
+cat("Especificidad:", round(specificity_rf, 2), "%\n")
+cat("Precisión (Valor Predictivo Positivo):", round(precision_rf, 2), "%\n")
+```
+```{r}
+varImpPlot(rf_model, main = "Variable Importance in Random Forest")
+```
+The Random Forest model trained with 500 trees and 3 variables per split shows moderate performance, as reflected in the confusion matrix and the metrics obtained. In the matrix, the model correctly classifies 61 cases as compliant (*No*) and 13 as defaulters (*Yes*). However, it makes 20 false negative errors (defaulters classified as compliant) and 6 false positive errors (compliant customers classified as defaulters).  
+
+The overall accuracy of the model is 74%, which indicates acceptable but improvable performance. Specificity, at 91.04%, is high, showing that the model is very effective at identifying compliant customers. However, sensitivity, at 39.39%, is low, reflecting difficulties in identifying defaulters. The positive predictive value, at 68.42%, indicates that a significant proportion of the customers predicted as defaulters are correctly identified, although there is still room for improvement.  
+
+The variable importance analysis shows that *checking_balance* and *months_loan_duration* are the most influential factors, followed by *credit_history* and *amount*. Variables such as *telephone* and *foreign_worker* have little relevance in the model.  
+
+Although the model improves in overall accuracy and specificity compared to the original decision tree, its low sensitivity and high number of false negatives make it *insufficient* for real-world applications without further adjustments.  
+
++ **Comparison with the Decision Tree**  
+
+When comparing the original decision tree with the Random Forest (RF) model, we see that RF significantly improves overall accuracy and specificity but faces similar challenges with sensitivity. While the decision tree achieved an overall accuracy of 67%, RF increased it to 74%, showing better general performance. In addition, RF is much more effective at identifying compliant customers (*No*), with specificity of 91.04% compared to 77.61% for the decision tree. This means that RF misclassifies fewer compliant customers as defaulters, reducing the operational impact of false positives.  
+
+However, sensitivity remains low in both models. The decision tree correctly identifies 45.45% of actual defaulters, while RF only reaches 39.39%. This indicates that both models struggle to detect high-risk customers, which could result in financial losses due to false negatives (18 in the decision tree vs. 20 in RF).  
+
+Positive predictive value also improves slightly in RF, rising from 50% in the decision tree to 68.42%. This suggests that RF is more reliable when predicting defaulters, although there is still room for improvement in both models.  
+
+We will now build a more accurate Random Forest model using the **caret** package, which provides greater flexibility and advanced tools to optimize the model and evaluate its performance. This approach differs from the basic model in several important ways. First, it employs 5-fold cross-validation during training, meaning the data is split into multiple parts to evaluate the model more robustly and ensure it performs well across different subsets. In addition, it automatically tunes hyperparameters, testing different configurations and selecting the best one to improve model performance.  
+
+This approach then generates predictions on the test set and evaluates performance using a confusion matrix that includes key metrics such as accuracy, sensitivity, and specificity. It also analyzes variable importance, showing which features are most relevant for the model. Finally, it calculates prediction probabilities and generates a ROC curve with the area under the curve (AUC), providing both a visual and numerical measure of how well the model balances sensitivity and specificity.  
+
+*Reference Nº7*  
+
+```{r}
+train_control <- trainControl(method = "cv",  
+                              number = 5,    
+                              verboseIter = TRUE)
+
+set.seed(100)
+rf_model_caret <- train(default ~ ., 
+                        data = train, 
+                        method = "rf", 
+                        trControl = train_control,
+                        tuneLength = 5) 
+
+
+print(rf_model_caret)
+
+```
+```{r}
+rf_predictions <- predict(rf_model_caret, newdata = test)
+conf_matrix_rf <- confusionMatrix(rf_predictions, test$default)
+print(conf_matrix_rf)
+```
+
+```{r}
+varImp_rf <- varImp(rf_model_caret)
+plot(varImp_rf, main = "Variable Importance in Random Forest")
+
+```
+```{r}
+rf_probs <- predict(rf_model_caret, newdata = test, type = "prob")[, 2]
+roc_curve <- roc(test$default, rf_probs)
+plot(roc_curve, main = "Curve ROC for Random Forest")
+auc(roc_curve)
+
+```
+
++ **Explanation of the Random Forest Model with caret**
+
+The model was trained and optimized using 5-fold cross-validation. During training, five different values of *mtry* (number of variables used per split) were tested, and the model selected the optimal value, *mtry = 34*, based on the highest average accuracy obtained across the folds.  
+
+In terms of results, the model achieved an overall accuracy of 71%, meaning it correctly classified 71% of the cases. However, performance across classes is unbalanced. Sensitivity, which measures how well the model correctly identifies compliant customers (*No*), is high at 86.57%. On the other hand, specificity, which measures the ability to correctly identify defaulters (*Yes*), is low at 39.39%. This means the model tends to misclassify many defaulters as compliant customers. The Positive Predictive Value (PPV) is 74.36%, indicating that the majority of predictions classified as compliant are correct.  
+
+The variable importance analysis shows that the most relevant features are *checking_balance*, *months_loan_duration*, and *amount*. These variables play a key role in the model’s decisions. The ROC curve shows a decent AUC, suggesting a reasonable balance between sensitivity and specificity at different thresholds, although there is still room for improvement.  
+
+This model improved compared to the decision tree and offers greater robustness thanks to cross-validation. However, the low specificity limits its ability to correctly identify defaulters, which is critical in credit risk analysis.  
+
+---
+
++ **Comparison with the Previous RF and the Decision Tree**
+
+Compared to the Random Forest trained directly with the *randomForest* package, this *caret*-based model shows some notable differences. The overall accuracy of the previous model was 74%, while this caret model achieves 71%. Although the general accuracy is slightly lower, the cross-validation process makes this model more reliable and less prone to overfitting.  
+
+The sensitivity of the caret model is significantly higher (86.57% compared to 39.39% in the previous RF). This indicates that this model is much better at identifying compliant customers (*No*). However, its specificity is much lower (39.39% compared to 91.04% in the previous RF), meaning that this model misclassifies many defaulters as compliant customers.  
+
+In comparison with the decision tree, this model performs better in overall accuracy (71% vs. 67%) and in sensitivity (86.57% vs. 45.45%). However, it shows similar issues in terms of low specificity, which was also a problem for the decision tree.  
+
+In general, although the caret model significantly improves sensitivity, it still struggles to identify defaulters, which remains a critical issue in this context.  
+
+# What alternatives remain after not being fully convinced with our analyses?  
+
++ **SVM**  
+We will test one final model: Support Vector Machines (SVM) to classify applicants into risk categories based on the provided features, as described in the following reference.  
+
+*Reference Nº8*  
+
+```{r}
+preProcValues <- preProcess(train[, -ncol(train)], method = c("center", "scale"))
+train_scaled <- predict(preProcValues, train[, -ncol(train)])
+test_scaled <- predict(preProcValues, test[, -ncol(test)])
+
+train_scaled$default <- train$default
+test_scaled$default <- test$default
+
+set.seed(123)
+svm_model <- svm(default ~ ., data = train_scaled, kernel = "radial", cost = 1, gamma = 0.1, probability = TRUE)
+
+```
+
+```{r}
+svm_predictions <- predict(svm_model, test_scaled, probability = TRUE)
+conf_matrix_svm <- confusionMatrix(svm_predictions, test_scaled$default)
+print(conf_matrix_svm)
+
+```
+```{r}
+svm_probabilities <- attr(svm_predictions, "probabilities")[, "yes"]
+roc_curve_svm <- roc(test_scaled$default, svm_probabilities)
+plot(roc_curve_svm, main = "Curva ROC para SVM")
+auc(roc_curve_svm)
+
+```
+
+
++ **SVM Model Results**
+
+The confusion matrix and generated metrics show that the SVM model achieved 74% overall accuracy, slightly higher than the previous models. Sensitivity is high at 89.55%, meaning it correctly identifies most compliant customers (*No*). However, specificity is low at 42.42%, which indicates difficulties in correctly classifying defaulters (*Yes*). The Positive Predictive Value (PPV) is 75.95%, showing that most customers classified as compliant are indeed correct.  
+
+The ROC curve demonstrates reasonable performance with an AUC consistent with a useful, though not perfect, model. This shows that the SVM provides an acceptable balance between sensitivity and specificity.  
+
++ **Comparison with the Decision Tree and Random Forest**  
+
+- *Overall Accuracy:* SVM (74%) has accuracy comparable to the first Random Forest model (74%) and higher than the original decision tree (67%).  
+- *Sensitivity:* SVM (89.55%) is more effective than both Random Forest models (86.57% and 39.39%) and the decision tree (45.45%) in identifying compliant customers.  
+- *Specificity:* Similar to the second Random Forest model with caret (42.42%), SVM struggles to identify defaulters, making it less effective than the first Random Forest (91.04%).  
+- *Positive Predictive Value:* At 75.95%, SVM slightly outperforms both Random Forest models and the decision tree, making it more reliable for predicting compliant customers.  
+
++ **Does SVM Improve?**  
+
+SVM offers balanced and slightly improved performance compared to previous models, particularly in overall accuracy and sensitivity. However, its low specificity still limits its ability to correctly identify defaulters, which could be critical in a credit risk system.  
+
+This model represents a significant improvement in some aspects, but it would be more effective if class weights were adjusted or balancing techniques were applied to improve specificity. Additionally, tuning parameters such as cost and gamma could further refine the model.  
+
+# Summary of Main Findings Across All Models  
+
++ **Comparative Analysis: Random Forest, Decision Tree, and SVM**  
+
+The analysis compares the performance of three machine learning models – Decision Tree, Random Forest, and Support Vector Machine (SVM) – applied to a binary classification dataset. Each model was evaluated in terms of key metrics such as overall accuracy, sensitivity, specificity, and overall robustness. Below is a detailed summary with specific results and conclusions.  
+
++ **1. Decision Tree Model**  
+
+Decision Trees are known for their simplicity and interpretability, making them useful as a baseline model for classification tasks. However, this analysis highlights their limitations:  
+
+- Overall Accuracy: 67%  
+- Sensitivity (Recall): 45.45%  
+- Specificity: 80%  
+
+The overall accuracy is acceptable, but the low sensitivity reveals a poor ability to correctly identify defaulters (positive class). This means that more than half of positive cases are misclassified, which is critical in sensitive applications like fraud detection or credit risk assessment.  
+
+While specificity is relatively high (80%), indicating good ability to identify compliant customers, the model lacks robustness with noisy or imbalanced data. In short, Decision Trees are useful for quick interpretation but are not the best for maximizing predictive performance.  
+
++ **2. Random Forest (First Fit)**  
+
+The first Random Forest model showed significant improvements over the Decision Tree:  
+
+- Overall Accuracy: 74%  
+- Sensitivity (Recall): 59.09%  
+- Specificity: 91.04%  
+
+Random Forest, by combining multiple decision trees and averaging results, is less prone to overfitting and more robust to variability in data. In this analysis, its overall accuracy improved to 74%, a considerable gain over the Decision Tree.  
+
+Specificity reached an excellent 91.04%, showing that this model is highly reliable for classifying compliant customers. However, sensitivity remains moderate (59.09%), meaning it still fails to detect a significant portion of defaulters. This imbalance between sensitivity and specificity can be problematic in contexts where false negatives are costly.  
+
++ **3. Random Forest (Tuned with caret)**  
+
+The Random Forest tuned with the *caret* package and hyperparameter optimization achieved a better balance between sensitivity and overall accuracy:  
+
+- Overall Accuracy: 71%  
+- Sensitivity (Recall): 86.57%  
+- Specificity: 39.39%  
+
+This model displayed very high sensitivity (86.57%), making it the best at detecting defaulters. However, its specificity is low, misclassifying many compliant customers as defaulters. This can be problematic when false positives have significant implications, such as denying loans to reliable clients.  
+
+Cross-validation and hyperparameter tuning made this model more robust and generalizable, positioning it as a strong option in contexts where sensitivity is the priority.  
+
++ **4. Support Vector Machine (SVM)**  
+
+The SVM achieved balanced performance:  
+
+- Overall Accuracy: 74%  
+- Sensitivity: 89.55%  
+- Specificity: 42.42%  
+
+SVM excels in handling high-dimensional problems and non-linear decision boundaries. It is less interpretable than tree-based models and requires parameter tuning, but it can provide strong results. In this analysis, SVM achieved high accuracy and sensitivity, outperforming the Decision Tree and comparable to Random Forest. However, its low specificity remains a limitation.  
+
+# Final Conclusions  
+
+- **Decision Tree:** Most interpretable, but limited performance (67% accuracy, 45.45% sensitivity) makes it unsuitable for critical tasks like predicting defaults.  
+- **Random Forest (First Fit):** Improved overall accuracy (74%) and excellent specificity (91.04%), making it reliable for identifying compliant customers. However, sensitivity was moderate, limiting its ability to detect defaulters.  
+- **Random Forest (caret):** Achieved the best sensitivity (86.57%) and a good balance with 71% accuracy, but specificity was very low (39.39%), producing too many false positives.  
+- **SVM:** Achieved 74% accuracy and 89.55% sensitivity, making it strong in detecting compliant customers, but specificity was still low (42.42%), limiting its usefulness in identifying defaulters.  
+
+Overall, the **Random Forest tuned with caret** appears the most promising, especially when sensitivity (detecting defaulters) is the priority. However, improvements should focus on reducing false positives to achieve a more robust balance for real-world credit risk applications.  
+
+# Final Conclusion  
+
+After evaluating all models, I consider **Random Forest** the most suitable for this analysis due to its balance between overall accuracy and specificity. With an error rate of 23.44%, this model is reliable for identifying defaulters in a credit risk system. While SVM has high sensitivity (89.55%), its low specificity (42.42%) poses a higher risk of misclassifying defaulters. The Decision Tree, although interpretable, had an error rate of 33%, making it less accurate for this task.  
+
+In conclusion, I would select the **Random Forest tuned with caret, optimized through cross-validation**, to maximize effectiveness in credit risk detection.  
+
+# References  
+
++ Nº1- https://r4ds.had.co.nz/factors.html#:~:text=In%20R%2C%20factors%20are%20used,to%20work%20with%20than%20characters.**htt
++ Nº2 - https://medium.com/data-and-beyond/how-to-start-using-decision-tree-classification-in-r-b1e8023774cb
++ Nº3 - https://medium.com/nerd-for-tech/overfitting-and-pruning-in-decision-trees-improving-models-accuracy-fdbe9ecd1160
++ Nº4 - https://builtin.com/data-science/diagrammer
++ Nº5 - https://www.datanalytics.com/2022/06/21/matriz-confusion-sensibilidad-especificidad-etc/?utm_source=chatgpt.com
++ Nº6 - https://www.r-bloggers.com/2021/04/random-forest-in-r/
++ Nº7 - https://rpubs.com/arquez9512/592295
++ Nº8 - https://www.kaggle.com/code/gilbertomanunza/german-credit-dataset-analysis
++ Nº9 - https://www.kaggle.com/datasets/shravan3273/credit-approval
++ Nº10- https://uc-r.github.io/iml-pkg
++ Nº11- Se utiliza análisis multivariante como fuente de datos.
