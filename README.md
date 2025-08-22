@@ -15,22 +15,20 @@ We compare **Decision Trees**, **Random Forest**, and **Support Vector Machines 
 ---
 
 ## 📂 Repository Structure
-├── data/ # Dataset (German Credit)
-├── scripts/ # Modular R scripts for each step
-├── results/ # Outputs: confusion matrices, metrics, variable importance
-├── docs/ # Plots and images for README
-│ ├── 1.JPG
-│ ├── 2.JPG
-│ ├── 3.JPG
-│ └── 4.JPG
+
+```bash
+├── data/                  # Dataset (German Credit)
+├── scripts/               # Modular R scripts for each step
+├── results/               # Outputs: confusion matrices, metrics, variable importance
+├── docs/                  # Plots and images for README
+│   ├── 1.JPG
+│   ├── 2.JPG
+│   ├── 3.JPG
+│   └── 4.JPG
 ├── Datamanz_CreditRisk.Rmd
 ├── README.md
 ├── LICENSE
 └── .gitignore
-
-yaml
-Copiar
-Editar
 
 ---
 
