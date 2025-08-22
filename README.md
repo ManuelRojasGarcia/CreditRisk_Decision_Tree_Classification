@@ -1,13 +1,17 @@
-# Credit Risk Classification with Decision Trees, Random Forest, and SVM
+# 📊 Credit Risk Classification with Decision Trees, Random Forest, and SVM
 
-This repository contains the **Datamanz** project for credit risk classification on the German Credit dataset.  
-We compare **Decision Trees**, **Random Forest**, and **SVM**, reporting accuracy, sensitivity, specificity, PPV, ROC/AUC, and variable importance.
+This repository contains the **Datamanz project** for credit risk classification on the German Credit dataset.  
+We compare **Decision Trees**, **Random Forest**, and **Support Vector Machines (SVM)**, reporting metrics such as accuracy, sensitivity, specificity, PPV, ROC/AUC, and variable importance.  
 
-## Objectives
-1. Reproducible preprocessing and EDA.
-2. Baseline model: Decision Tree (+ pruning and rules).
-3. Ensembles: Random Forest (base and caret-tuned).
-4. Margin-based model: SVM (caret, ROC/AUC).
-5. Comparative evaluation and conclusions.
+---
 
-## Project Structure
+## ✨ Project Objectives
+- 🔍 Perform **Exploratory Data Analysis (EDA)** to identify key patterns.  
+- 🌳 Build and prune **Decision Trees** for interpretability.  
+- 🌲 Apply **Random Forest** for ensemble learning.  
+- 🤖 Train **Support Vector Machines (SVM)** for margin-based classification.  
+- 📈 Evaluate models with **confusion matrices, metrics, and ROC curves**.  
+
+---
+
+## 📂 Repository Structure
